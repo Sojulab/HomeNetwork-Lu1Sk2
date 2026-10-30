@@ -82,7 +82,7 @@ except Exception as e:
     print(f'no <debug> argument ({e})')
     # app_config.set_config_debug({})
 
-home: Home = get_home('Hillstate-Gwanggyosan', args.config_file_path)
+home: Home = get_home('Lu1City-SKLeadersView2nd', args.config_file_path)
 home.initRS485Connection()
 
 

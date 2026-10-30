@@ -1,4 +1,4 @@
-# YOGYUI Home Network: Hillstate-Gwanggyosan
+# YOGYUI Home Network: Lu1City-SKLeadersView2nd
 
 Integrate **Hillstate (Hyundai HT) `RS-485 based Wallpad` Home Network** to IoT Platforms (like **Apple HomeKit** and **Google Assistant**).<br>
 <img src="./summary.png" width="100%">
@@ -17,7 +17,7 @@ Notice: scripts below are assumed to be run on **Raspberry Pi (with Raspbian OS)
     $ mkdir ~/repos
     $ cd ~/repos
     $ git clone https://github.com/YOGYUI/HomeNetwork.git
-    $ cd HomeNetwork/Hillstate-Gwanggyosan
+    $ cd HomeNetwork/Lu1City-SKLeadersView2nd
     ```
 2. Install python3 requirements
     ```
@@ -27,7 +27,7 @@ Notice: scripts below are assumed to be run on **Raspberry Pi (with Raspbian OS)
 Configuration
 ---
 All configurations needed to run application properly are stored in 
-[config.xml](https://github.com/YOGYUI/HomeNetwork/blob/main/Hillstate-Gwanggyosan/config.xml) 
+[config.xml](https://github.com/YOGYUI/HomeNetwork/blob/main/Lu1City-SKLeadersView2nd/config.xml) 
 file. <br>
 1. RS-485 to UART Converter 
     - Common
@@ -508,8 +508,8 @@ default topic: `/home/command/dimminglight/0/0`
 Homebridge & Home Assistant(HA) Configuration
 ---
 You can find home IoT platform configuration template (json for homebridge, yaml for HA) is this repository. 
-- Homebridge: [homebridge_config.json](https://github.com/YOGYUI/HomeNetwork/blob/main/Hillstate-Gwanggyosan/Template/homebridge/homebridge_config.json) 
-- Home Assistant: [ha_configuration.yaml](https://github.com/YOGYUI/HomeNetwork/blob/main/Hillstate-Gwanggyosan/Template/homeassistant/ha_configuration.yaml) 
+- Homebridge: [homebridge_config.json](https://github.com/YOGYUI/HomeNetwork/blob/main/Lu1City-SKLeadersView2nd/Template/homebridge/homebridge_config.json) 
+- Home Assistant: [ha_configuration.yaml](https://github.com/YOGYUI/HomeNetwork/blob/main/Lu1City-SKLeadersView2nd/Template/homeassistant/ha_configuration.yaml) 
 - **HA MQTT Discovery support** <br>
     by configuring below options, application can support MQTT discovery function of HomeAssistant! <br>
     (you can take off your hands for setting HA configuration yaml file)
@@ -533,11 +533,11 @@ Run the Application
 ---
 - native python 
     ```
-    $ /bin/python3 ~/repos/HomeNetwork/Hillstate-Gwanggyosan/app.py
+    $ /bin/python3 ~/repos/HomeNetwork/Lu1City-SKLeadersView2nd/app.py
     ```
 - Nginx & uWSGI environment
     ```
-    $ /usr/local/bin/uwsgi ~/repos/HomeNetwork/Hillstate-Gwanggyosan/uwsgi.ini
+    $ /usr/local/bin/uwsgi ~/repos/HomeNetwork/Lu1City-SKLeadersView2nd/uwsgi.ini
     ```
     `uwsgi.sock` file will be created at project directory after launching application. <br>
     Below is nginx sites-available configuration example.

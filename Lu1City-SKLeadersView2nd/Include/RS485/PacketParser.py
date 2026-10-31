@@ -611,10 +611,12 @@ class PacketParser:
             if self.debug_verbose_packet.get(DeviceType.VENTILATOR, False):
                 writeLog("[VENTILATOR][R]{}".format(self.prettifyPacket(packet)))
             state = 0 if packet[8] == 0x02 else 1
+            bypass = bool(packet[8] & 0x80)  # bit7 = 바이패스 (실차 확인: 0x81 = ON+바이패스)
             rotation_speed = packet[9]  # 0x01=약, 0x03=중, 0x07=강
             result = {
                 'device': DeviceType.VENTILATOR,
-                'state': state
+                'state': state,
+                'bypass': bypass
             }
             if rotation_speed != 0:
                 result['rotation_speed'] = rotation_speed

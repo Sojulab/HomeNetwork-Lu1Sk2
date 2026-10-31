@@ -1197,9 +1197,9 @@ class Home:
                     rotation_speed=rotation_speed
                 )
             elif dev_type is DeviceType.VENTILATOR:
-                state = result.get('state')
+                state = result.get('state') or 0
                 rotation_speed = result.get('rotation_speed')
-                device.updateState(state, rotation_speed=rotation_speed)
+                device.updateState(state, rotation_speed=rotation_speed, bypass=result.get('bypass'))
             elif dev_type is DeviceType.ELEVATOR:
                 device.updateState(
                     0, 
@@ -1543,6 +1543,21 @@ class Home:
                     category='state',
                     target=message['state']
                 )
+            if 'bypass' in message.keys():
+                # 바이패스 제어 (0x81/0x01) — 환기 ON 상태에서 유효
+                if device.state == 1:
+                    self.send_command(
+                        device=device,
+                        category='bypass',
+                        target=message['bypass']
+                    )
+                else:
+                    # 꺼져 있으면 ON + 요청 모드(바이패스 여부 유지)로 전송
+                    self.send_command(
+                        device=device,
+                        category='bypass' if message['bypass'] else 'state',
+                        target=1 if not message['bypass'] else message['bypass']
+                    )
             if 'rotationspeed' in message.keys():
                 if device.state == 1:
                     # 전원이 켜져있을 경우에만 풍량설정 가능하도록..

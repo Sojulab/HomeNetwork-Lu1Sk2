@@ -11,6 +11,8 @@ class Ventilator(Device):
         self.mqtt_command_topic = f'{topic_prefix}/command/ventilator/{self.room_index}/{self.index}'
         self.rotation_speed: int = -1
         self.rotation_speed_prev: int = -1
+        self.bypass: bool = False
+        self.bypass_prev: bool = False
     
     def setDefaultName(self):
         self.name = 'Ventilator'
@@ -18,7 +20,8 @@ class Ventilator(Device):
     def publishMQTT(self):
         obj = {
             "state": self.state, 
-            "rotationspeed": 0
+            "rotationspeed": 0,
+            "bypass": 1 if self.bypass else 0
         }
         if self.state:
             if self.rotation_speed == 0x01:
@@ -48,7 +51,13 @@ class Ventilator(Device):
             "percentage_command_topic": self.mqtt_command_topic,
             "percentage_command_template": '{ "rotationspeed": {{ value }} }',
             "speed_range_min": 1,
-            "speed_range_max": 100
+            "speed_range_max": 100,
+            # 바이패스 (0x80 비트, 2026-10 실차 검증) — normal/bypass 프리셋으로 노출
+            "preset_modes": ["normal", "bypass"],
+            "preset_mode_state_topic": self.mqtt_state_topic,
+            "preset_mode_value_template": "{% if value_json.bypass %}bypass{% else %}normal{% endif %}",
+            "preset_mode_command_topic": self.mqtt_command_topic,
+            "preset_mode_command_template": '{ "bypass": {{ 1 if value == "bypass" else 0 }} }'
         }
         if self.check_ha_core_version("2025.10.1"):
             obj["default_entity_id"] = self.unique_id
@@ -111,6 +120,13 @@ class Ventilator(Device):
             if self.rotation_speed != self.rotation_speed_prev:
                 self.publishMQTT()
             self.rotation_speed_prev = self.rotation_speed
+        # 바이패스 인자 (packet[8] bit7)
+        bypass = kwargs.get('bypass')
+        if bypass is not None:
+            self.bypass = bool(bypass)
+            if self.bypass != self.bypass_prev:
+                self.publishMQTT()
+            self.bypass_prev = self.bypass
     
     def makePacketQueryState(self) -> bytearray:
         # F7 0B 01 2B 01 40 11 00 00 XX EE
@@ -133,6 +149,20 @@ class Ventilator(Device):
             packet.extend([0x01, 0x00])
         else:
             packet.extend([0x02, 0x00])
+        packet.append(self.calcXORChecksum(packet))
+        packet.append(0xEE)
+        return packet
+
+    def makePacketSetBypass(self, bypass: bool) -> bytearray:
+        # F7 0B 01 2B 02 40 11 XX 00 YY EE
+        # XX: state 바이트 — 0x81 = ON+바이패스 / 0x01 = ON / 0x02 = OFF
+        # (0x80 bit7 = 바이패스 플래그, 2026-10 RS-485 실차 관측 기반)
+        packet = bytearray([0xF7, 0x0B, 0x01, 0x2B, 0x02, 0x40])
+        packet.append(0x11)  # 환기는 거실(공간인덱스 1)에 설치된걸로 설정되어 있다
+        if bypass:
+            packet.extend([0x81, 0x00])
+        else:
+            packet.extend([0x01, 0x00])
         packet.append(self.calcXORChecksum(packet))
         packet.append(0xEE)
         return packet

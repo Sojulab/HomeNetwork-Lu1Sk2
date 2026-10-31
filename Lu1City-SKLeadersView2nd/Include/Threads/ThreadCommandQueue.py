@@ -92,6 +92,8 @@ class ThreadCommandQueue(threading.Thread):
                             self.set_state_common(dev, target, parser, change_state)
                         elif category == 'rotationspeed':
                             self.set_rotation_speed(dev, target, parser, change_state)
+                        elif category == 'bypass':
+                            self.set_ventilator_bypass(dev, target, parser, change_state)
                     elif isinstance(dev, AirConditioner):
                         if category == 'active':
                             # for handling homebridge entity
@@ -264,6 +266,33 @@ class ThreadCommandQueue(threading.Thread):
         if not success and change_state:
             dev.temp_config = target_temp
         dev.publishMQTT()
+
+    def set_ventilator_bypass(self, dev, target: int, parser: PacketParser, change_state: bool = False):
+        # 바이패스 ON: state 바이트 0x81 (ON+bit7), OFF: 0x01 (정상 전열교환)
+        tm_start = time.perf_counter()
+        cnt = 0
+        target_b = bool(target)
+        packet_command = dev.makePacketSetBypass(target_b)
+        interval, retry_cnt = self.getSendParams(parser)
+        success = False
+        while cnt < retry_cnt:
+            if dev.bypass == target_b and dev.state == 1:
+                success = True
+                break
+            if parser.isRS485LineBusy():
+                time.sleep(1e-3)
+                continue
+            parser.sendPacket(packet_command)
+            cnt += 1
+            time.sleep(interval)
+        if cnt > 0:
+            tm_elapsed = time.perf_counter() - tm_start
+            writeLog('set_ventilator_bypass::send # = {}, elapsed = {:g} msec'.format(cnt, tm_elapsed * 1000), self)
+        if not success:
+            writeLog(f'set_ventilator_bypass::{dev} target={target} NOT CONFIRMED', self)
+        if change_state and success:
+            dev.bypass = target_b
+            dev.publishMQTT()
 
     def set_rotation_speed(self, dev: Union[Ventilator, AirConditioner], target: int, parser: PacketParser, change_state: bool = False):
         tm_start = time.perf_counter()

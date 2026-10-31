@@ -7,8 +7,10 @@ class DimmingLight(Device):
     brightness: int = 0  # 현재 밝기 레벨
     brightness_prev: int = 0  # 현재 밝기 레벨 버퍼
     brightness_when_on: int = 0  # 켜진 상태에서 밝기 레벨
-    max_brightness_level: int = 7
+    max_brightness_level: int = 8
     conv_method: int = 0  # 0 = 반올림, 1 = 내림, 2 = 올림
+    BRIGHTNESS_GRID: int = 31  # 서브주소 0x75 프로토콜: 실측 밝기 byte = level * 31 (레벨 0~8)
+    BRIGHTNESS_SUBADDR: int = 0x75  # 밝기 서브주소 (레거시 패드: 0x42)
 
     def __init__(self, name: str = 'DimmingLight', index: int = 0, room_index: int = 0, topic_prefix: str = 'home'):
         super().__init__(name, index, room_index, topic_prefix)
@@ -127,10 +129,10 @@ class DimmingLight(Device):
         return packet
 
     def makePacketQueryBrightness(self) -> bytearray:
-        # F7 0B 01 1A 01 42 XX 00 00 YY EE
+        # F7 0B 01 1A 01 75 XX 00 00 YY EE
         # XX: 상위 4비트 = Room Index, 하위 4비트 = Device Index (1-based)
         # YY: Checksum (XOR SUM)
-        packet = bytearray([0xF7, 0x0B, 0x01, 0x1A, 0x01, 0x42])
+        packet = bytearray([0xF7, 0x0B, 0x01, 0x1A, 0x01, self.BRIGHTNESS_SUBADDR])
         packet.append((self.room_index << 4) + (self.index + 1))
         packet.extend([0x00, 0x00])
         packet.append(self.calcXORChecksum(packet))
@@ -153,13 +155,20 @@ class DimmingLight(Device):
         return packet
 
     def makePacketSetBrightness(self, brightness: int) -> bytearray:
-        # F7 0B 01 1A 02 42 XX YY 00 ZZ EE
+        # F7 0B 01 1A 02 75 XX YY 00 ZZ EE
         # XX: 상위 4비트 = Room Index, 하위 4비트 = Device Index (1-based)
-        # YY: Dimming 레벨
+        # YY: Dimming 레벨 (0~max_brightness_level) × BRIGHTNESS_GRID(31) — 실측 프로토콜
         # ZZ: Checksum (XOR SUM)
-        packet = bytearray([0xF7, 0x0B, 0x01, 0x1A, 0x02, 0x42])
+        level = max(0, min(brightness, self.max_brightness_level))
+        wire_value = min(255, level * self.BRIGHTNESS_GRID)
+        packet = bytearray([0xF7, 0x0B, 0x01, 0x1A, 0x02, self.BRIGHTNESS_SUBADDR])
         packet.append((self.room_index << 4) + (self.index + 1))
-        packet.extend([max(0, min(brightness, self.max_brightness_level)), 0x00])
+        packet.extend([wire_value, 0x00])
         packet.append(self.calcXORChecksum(packet))
         packet.append(0xEE)
         return packet
+
+    @staticmethod
+    def decodeBrightnessByte(wire_value: int) -> int:
+        # 버스 실측 byte(level*31, 레거시 0x42 패드는 raw level) → 내부 레벨(0~max_brightness_level)
+        return wire_value // DimmingLight.BRIGHTNESS_GRID if wire_value > 8 else wire_value

@@ -201,7 +201,8 @@ class ThreadCommandQueue(threading.Thread):
 
         if target:
             if isinstance(dev, DimmingLight):
-                level = dev.brightness_when_on
+                # brightness_when_on은 패드 원시 레벨(word) → HA 스케일(0~255) 환산 후 전송 (단위 버그 수정)
+                level = dev.convert_word_to_level(dev.brightness_when_on)
                 writeLog(f'try to set dimming level to {level}', self)
                 self.set_brightness(dev, level, parser, change_state)
 

@@ -441,8 +441,10 @@ class PacketParser:
                             'brightness': None
                         }
                         self.updateDeviceState(result)
-                    elif state_type == 0x42:
-                        brightness = packet[8]
+                    elif state_type in (0x42, 0x75):  # 밝기 (0x75: 실측 패드 protocol, byte = level*31)
+                        brightness = int(packet[8])
+                        if brightness > 8:
+                            brightness = round(brightness / 31)  # 0x75 그리드 디코딩 (레거시 0x42 raw 레벨 호환)
                         result = {
                             'device': DeviceType.DIMMINGLIGHT, 
                             'index': idx,
@@ -462,8 +464,10 @@ class PacketParser:
                         'brightness': None
                     }
                     self.updateDeviceState(result)
-                elif state_type == 0x42:
-                    brightness = packet[8]
+                elif state_type in (0x42, 0x75):  # 밝기 (0x75: 실측 패드 protocol, byte = level*31)
+                    brightness = int(packet[8])
+                    if brightness > 8:
+                        brightness = round(brightness / 31)  # 0x75 그리드 디코딩 (레거시 0x42 raw 레벨 호환)
                     result = {
                         'device': DeviceType.DIMMINGLIGHT, 
                         'index': dev_idx - 1,
